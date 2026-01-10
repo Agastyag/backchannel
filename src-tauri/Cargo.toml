@@ -1,0 +1,34 @@
+[package]
+name = "backchannel"
+version = "0.1.0"
+description = "A Mac app to query iMessages using LLMs"
+authors = ["Agastya"]
+edition = "2021"
+
+[lib]
+name = "backchannel_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = ["macos-private-api"] }
+tauri-plugin-shell = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+rusqlite = { version = "0.32", features = ["bundled"] }
+tokio = { version = "1", features = ["full"] }
+thiserror = "2"
+plist = "1"
+regex = "1"
+chrono = { version = "0.4", features = ["serde"] }
+reqwest = { version = "0.12", features = ["json", "stream"] }
+futures = "0.3"
+keyring = { version = "3", features = ["apple-native"] }
+
+[profile.release]
+strip = true
+lto = true
+codegen-units = 1
+panic = "abort"
