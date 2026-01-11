@@ -4,14 +4,16 @@ use regex::Regex;
 /// Decode the attributedBody blob (NSAttributedString in binary plist format)
 /// Used for rich text messages in macOS Ventura+
 pub fn decode_attributed_body(data: &[u8]) -> Option<String> {
-    // Method 1: Try to extract using regex for simple cases
-    if let Some(text) = extract_text_regex(data) {
-        return Some(text);
+    // Method 1: Parse as binary plist (handles UTF-8/emoji correctly)
+    if let Ok(plist) = plist::from_bytes::<Value>(data) {
+        if let Some(text) = extract_from_plist(&plist) {
+            return Some(text);
+        }
     }
 
-    // Method 2: Parse as binary plist
-    if let Ok(plist) = plist::from_bytes::<Value>(data) {
-        return extract_from_plist(&plist);
+    // Method 2: Fallback to regex extraction
+    if let Some(text) = extract_text_regex(data) {
+        return Some(text);
     }
 
     None
