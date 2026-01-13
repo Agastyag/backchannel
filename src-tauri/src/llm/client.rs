@@ -3,10 +3,20 @@ use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use tauri::ipc::Channel;
 
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+#[serde(rename_all = "lowercase")]
+pub enum LlmProvider {
+    #[default]
+    Ollama,
+    OpenRouter,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LlmConfig {
+    pub provider: LlmProvider,
     pub api_key: String,
     pub model: String,
+    pub ollama_url: String,
     pub temperature: f32,
     pub max_tokens: u32,
 }
@@ -14,8 +24,10 @@ pub struct LlmConfig {
 impl Default for LlmConfig {
     fn default() -> Self {
         Self {
+            provider: LlmProvider::Ollama,
             api_key: String::new(),
-            model: "anthropic/claude-3.5-sonnet".to_string(),
+            model: "llama3.1:8b".to_string(),
+            ollama_url: "http://localhost:11434".to_string(),
             temperature: 0.7,
             max_tokens: 4096,
         }
@@ -106,16 +118,27 @@ impl LlmClient {
             stream: Some(false),
         };
 
-        let response = self
-            .client
-            .post("https://openrouter.ai/api/v1/chat/completions")
-            .header("Authorization", format!("Bearer {}", self.config.api_key))
-            .header("HTTP-Referer", "https://backchannel.app")
-            .header("X-Title", "Backchannel")
-            .json(&request)
-            .send()
-            .await
-            .map_err(|e| e.to_string())?;
+        let response = match self.config.provider {
+            LlmProvider::Ollama => {
+                self.client
+                    .post(format!("{}/v1/chat/completions", self.config.ollama_url))
+                    .json(&request)
+                    .send()
+                    .await
+                    .map_err(|e| format!("Ollama connection error: {}. Is Ollama running?", e))?
+            }
+            LlmProvider::OpenRouter => {
+                self.client
+                    .post("https://openrouter.ai/api/v1/chat/completions")
+                    .header("Authorization", format!("Bearer {}", self.config.api_key))
+                    .header("HTTP-Referer", "https://backchannel.app")
+                    .header("X-Title", "Backchannel")
+                    .json(&request)
+                    .send()
+                    .await
+                    .map_err(|e| e.to_string())?
+            }
+        };
 
         if !response.status().is_success() {
             let status = response.status();
@@ -160,16 +183,27 @@ impl LlmClient {
             stream: Some(true),
         };
 
-        let response = self
-            .client
-            .post("https://openrouter.ai/api/v1/chat/completions")
-            .header("Authorization", format!("Bearer {}", self.config.api_key))
-            .header("HTTP-Referer", "https://backchannel.app")
-            .header("X-Title", "Backchannel")
-            .json(&request)
-            .send()
-            .await
-            .map_err(|e| e.to_string())?;
+        let response = match self.config.provider {
+            LlmProvider::Ollama => {
+                self.client
+                    .post(format!("{}/v1/chat/completions", self.config.ollama_url))
+                    .json(&request)
+                    .send()
+                    .await
+                    .map_err(|e| format!("Ollama connection error: {}. Is Ollama running?", e))?
+            }
+            LlmProvider::OpenRouter => {
+                self.client
+                    .post("https://openrouter.ai/api/v1/chat/completions")
+                    .header("Authorization", format!("Bearer {}", self.config.api_key))
+                    .header("HTTP-Referer", "https://backchannel.app")
+                    .header("X-Title", "Backchannel")
+                    .json(&request)
+                    .send()
+                    .await
+                    .map_err(|e| e.to_string())?
+            }
+        };
 
         if !response.status().is_success() {
             let status = response.status();

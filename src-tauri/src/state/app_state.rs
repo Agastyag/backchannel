@@ -1,7 +1,7 @@
 use std::sync::Mutex;
 
 use crate::db::ChatDb;
-use crate::llm::{LlmClient, LlmConfig, Nl2SqlEngine};
+use crate::llm::{LlmClient, LlmConfig, LlmProvider, Nl2SqlEngine};
 
 pub struct AppState {
     pub llm_config: Mutex<LlmConfig>,
@@ -25,8 +25,9 @@ impl AppState {
             .map_err(|e| e.to_string())?
             .clone();
 
-        if config.api_key.is_empty() {
-            return Err("API key not configured".to_string());
+        // Only require API key for OpenRouter
+        if config.provider == LlmProvider::OpenRouter && config.api_key.is_empty() {
+            return Err("OpenRouter API key not configured".to_string());
         }
 
         Ok(LlmClient::new(config))
@@ -47,6 +48,33 @@ impl AppState {
         let mut config = self.llm_config.lock().map_err(|e| e.to_string())?;
         config.model = model;
         Ok(())
+    }
+
+    pub fn update_provider(&self, provider: LlmProvider) -> Result<(), String> {
+        let mut config = self.llm_config.lock().map_err(|e| e.to_string())?;
+        config.provider = provider;
+        Ok(())
+    }
+
+    pub fn update_ollama_url(&self, url: String) -> Result<(), String> {
+        let mut config = self.llm_config.lock().map_err(|e| e.to_string())?;
+        config.ollama_url = url;
+        Ok(())
+    }
+
+    pub fn get_provider(&self) -> Result<LlmProvider, String> {
+        let config = self.llm_config.lock().map_err(|e| e.to_string())?;
+        Ok(config.provider.clone())
+    }
+
+    pub fn get_ollama_url(&self) -> Result<String, String> {
+        let config = self.llm_config.lock().map_err(|e| e.to_string())?;
+        Ok(config.ollama_url.clone())
+    }
+
+    pub fn get_model(&self) -> Result<String, String> {
+        let config = self.llm_config.lock().map_err(|e| e.to_string())?;
+        Ok(config.model.clone())
     }
 }
 

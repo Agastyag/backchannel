@@ -75,3 +75,25 @@ Format the response with clear markdown headers."#,
         messages_json
     )
 }
+
+pub fn answer_question_prompt(question: &str, messages_json: &str) -> String {
+    format!(
+        r#"You are a helpful assistant that answers questions based on the user's iMessage history.
+
+The user asked: "{}"
+
+Here are relevant messages from their iMessage history (JSON format):
+{}
+
+Instructions:
+1. Answer the user's question directly and concisely based on the messages provided
+2. If the messages contain the answer, provide specific details (dates, times, names, places)
+3. If the messages don't contain relevant information to answer the question, say "I couldn't find any messages about this in your chat history"
+4. Do NOT list out individual messages - synthesize the information into a natural response
+5. If you cite information, mention who said it naturally (e.g., "John mentioned that...")
+6. Keep your response brief - 1-3 sentences for simple questions, a short paragraph for complex ones
+
+Respond naturally as if you're a helpful assistant who has access to the user's messages."#,
+        question, messages_json
+    )
+}
