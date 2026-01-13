@@ -5,12 +5,24 @@ import { OnboardingModal } from "@/components/settings/OnboardingModal";
 import { Loader2 } from "lucide-react";
 
 function App() {
-  const { loadSettings, hasPermissions, apiKey, isLoading } = useSettingsStore();
+  const { loadSettings, hasPermissions, provider, checkPermissions, isLoading } =
+    useSettingsStore();
   const [initialized, setInitialized] = useState(false);
 
   useEffect(() => {
     loadSettings().finally(() => setInitialized(true));
   }, [loadSettings]);
+
+  // Re-check permissions when app gains focus (user might have granted them)
+  useEffect(() => {
+    const handleFocus = () => {
+      if (!hasPermissions) {
+        checkPermissions();
+      }
+    };
+    window.addEventListener("focus", handleFocus);
+    return () => window.removeEventListener("focus", handleFocus);
+  }, [hasPermissions, checkPermissions]);
 
   if (!initialized || isLoading) {
     return (
@@ -20,8 +32,9 @@ function App() {
     );
   }
 
-  if (!hasPermissions || !apiKey) {
-    return <OnboardingModal hasPermissions={hasPermissions} hasApiKey={!!apiKey} />;
+  // Only require permissions - Ollama doesn't need an API key
+  if (!hasPermissions) {
+    return <OnboardingModal hasPermissions={hasPermissions} provider={provider} />;
   }
 
   return <AppShell />;

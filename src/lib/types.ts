@@ -39,15 +39,30 @@ export interface SearchResult {
   relevance_score: number;
 }
 
+export interface QuestionAnswer {
+  answer: string;
+  source_messages: Message[];
+}
+
 export interface ModelInfo {
   id: string;
   name: string;
   description: string;
 }
 
+export type LlmProvider = "ollama" | "openrouter";
+
+export interface ProviderSettings {
+  provider: LlmProvider;
+  ollama_url: string;
+  model: string;
+}
+
 export interface LlmConfig {
+  provider: LlmProvider;
   api_key: string;
   model: string;
+  ollama_url: string;
   temperature: number;
   max_tokens: number;
 }

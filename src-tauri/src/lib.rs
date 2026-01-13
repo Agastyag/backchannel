@@ -20,6 +20,7 @@ pub fn run() {
             // Search commands
             commands::search::natural_language_search,
             commands::search::simple_search,
+            commands::search::ask_question,
             // Conversation commands
             commands::conversations::get_conversations,
             commands::conversations::get_conversation_messages,
@@ -32,6 +33,11 @@ pub fn run() {
             commands::settings::check_permissions,
             commands::settings::open_privacy_settings,
             commands::settings::get_available_models,
+            commands::settings::get_provider_settings,
+            commands::settings::save_provider_settings,
+            commands::settings::fetch_ollama_models,
+            commands::settings::check_ollama_status,
+            commands::settings::restart_app,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

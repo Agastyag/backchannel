@@ -1,30 +1,28 @@
 import { useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { useSettingsStore } from "@/stores/settingsStore";
-import { Shield, Key, ExternalLink, Loader2, CheckCircle2 } from "lucide-react";
+import {
+  Shield,
+  ExternalLink,
+  Loader2,
+  RefreshCw,
+} from "lucide-react";
+import type { LlmProvider } from "@/lib/types";
 
 interface OnboardingModalProps {
   hasPermissions: boolean;
-  hasApiKey: boolean;
+  provider: LlmProvider;
 }
 
-export function OnboardingModal({ hasPermissions, hasApiKey }: OnboardingModalProps) {
-  const { saveApiKey, checkPermissions, isLoading } = useSettingsStore();
-  const [apiKeyInput, setApiKeyInput] = useState("");
-  const [step, setStep] = useState<"permissions" | "apikey">(
-    hasPermissions ? "apikey" : "permissions"
-  );
-
-  const handleSaveApiKey = async () => {
-    if (apiKeyInput.trim()) {
-      await saveApiKey(apiKeyInput.trim());
-    }
-  };
+export function OnboardingModal({ hasPermissions }: OnboardingModalProps) {
+  const { checkPermissions, isLoading } = useSettingsStore();
+  const [isRestarting, setIsRestarting] = useState(false);
+  const [permissionGranted, setPermissionGranted] = useState(false);
 
   const handleCheckPermissions = async () => {
     const hasAccess = await checkPermissions();
     if (hasAccess) {
-      setStep("apikey");
+      setPermissionGranted(true);
     }
   };
 
@@ -33,6 +31,16 @@ export function OnboardingModal({ hasPermissions, hasApiKey }: OnboardingModalPr
       await invoke("open_privacy_settings");
     } catch (e) {
       console.error("Failed to open settings:", e);
+    }
+  };
+
+  const handleRestart = async () => {
+    setIsRestarting(true);
+    try {
+      await invoke("restart_app");
+    } catch (e) {
+      console.error("Failed to restart:", e);
+      setIsRestarting(false);
     }
   };
 
@@ -48,24 +56,7 @@ export function OnboardingModal({ hasPermissions, hasApiKey }: OnboardingModalPr
           </p>
         </div>
 
-        {/* Steps indicator */}
-        <div className="flex items-center justify-center gap-4 mb-8">
-          <StepIndicator
-            number={1}
-            label="Permissions"
-            isActive={step === "permissions"}
-            isComplete={hasPermissions}
-          />
-          <div className="w-12 h-0.5 bg-gray-200 dark:bg-gray-700" />
-          <StepIndicator
-            number={2}
-            label="API Key"
-            isActive={step === "apikey"}
-            isComplete={hasApiKey}
-          />
-        </div>
-
-        {step === "permissions" && (
+        {!hasPermissions && !permissionGranted && (
           <div className="space-y-6">
             <div className="p-4 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
               <div className="flex items-start gap-3">
@@ -87,10 +78,9 @@ export function OnboardingModal({ hasPermissions, hasApiKey }: OnboardingModalPr
                 How to enable:
               </h4>
               <ol className="list-decimal list-inside space-y-2 text-sm text-gray-600 dark:text-gray-300">
-                <li>Open System Settings</li>
-                <li>Go to Privacy & Security → Full Disk Access</li>
-                <li>Click the + button and add Backchannel</li>
-                <li>Toggle it on</li>
+                <li>Click "Open Settings" below</li>
+                <li>Find and toggle on Backchannel</li>
+                <li>Come back and click "Restart App"</li>
               </ol>
             </div>
 
@@ -115,101 +105,62 @@ export function OnboardingModal({ hasPermissions, hasApiKey }: OnboardingModalPr
                 )}
               </button>
             </div>
+
+            <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
+              <p className="text-sm text-gray-500 text-center mb-3">
+                Already granted permission? Restart the app to apply:
+              </p>
+              <button
+                onClick={handleRestart}
+                disabled={isRestarting}
+                className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 disabled:opacity-50 transition-colors"
+              >
+                {isRestarting ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <>
+                    <RefreshCw className="h-4 w-4" />
+                    Restart App
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         )}
 
-        {step === "apikey" && (
+        {permissionGranted && (
           <div className="space-y-6">
-            <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+            <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
               <div className="flex items-start gap-3">
-                <Key className="h-5 w-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
+                <Shield className="h-5 w-5 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" />
                 <div>
-                  <h3 className="font-medium text-blue-800 dark:text-blue-200">
-                    OpenRouter API Key
+                  <h3 className="font-medium text-green-800 dark:text-green-200">
+                    Permission Detected!
                   </h3>
-                  <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
-                    Get your API key from{" "}
-                    <a
-                      href="https://openrouter.ai/keys"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="underline"
-                    >
-                      openrouter.ai/keys
-                    </a>
+                  <p className="text-sm text-green-700 dark:text-green-300 mt-1">
+                    macOS requires a restart for permissions to take effect.
                   </p>
                 </div>
               </div>
             </div>
 
-            <div>
-              <label
-                htmlFor="apiKey"
-                className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
-              >
-                API Key
-              </label>
-              <input
-                id="apiKey"
-                type="password"
-                value={apiKeyInput}
-                onChange={(e) => setApiKeyInput(e.target.value)}
-                placeholder="sk-or-..."
-                className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-            </div>
-
             <button
-              onClick={handleSaveApiKey}
-              disabled={isLoading || !apiKeyInput.trim()}
-              className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 transition-colors"
+              onClick={handleRestart}
+              disabled={isRestarting}
+              className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 disabled:opacity-50 transition-colors"
             >
-              {isLoading ? (
+              {isRestarting ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
-                "Continue"
+                <>
+                  <RefreshCw className="h-4 w-4" />
+                  Restart App Now
+                </>
               )}
             </button>
           </div>
         )}
       </div>
-    </div>
-  );
-}
-
-function StepIndicator({
-  number,
-  label,
-  isActive,
-  isComplete,
-}: {
-  number: number;
-  label: string;
-  isActive: boolean;
-  isComplete: boolean;
-}) {
-  return (
-    <div className="flex flex-col items-center gap-1">
-      <div
-        className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-colors ${
-          isComplete
-            ? "bg-green-100 text-green-600 dark:bg-green-900/50 dark:text-green-400"
-            : isActive
-            ? "bg-blue-500 text-white"
-            : "bg-gray-200 text-gray-500 dark:bg-gray-700"
-        }`}
-      >
-        {isComplete ? <CheckCircle2 className="h-5 w-5" /> : number}
-      </div>
-      <span
-        className={`text-xs ${
-          isActive || isComplete
-            ? "text-gray-900 dark:text-white"
-            : "text-gray-500"
-        }`}
-      >
-        {label}
-      </span>
     </div>
   );
 }
